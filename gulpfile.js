@@ -7,16 +7,10 @@ const plugins = require('gulp-load-plugins'),
     $ = plugins();
 const cssnext = require('postcss-cssnext');
 const cssnano = require('cssnano');
-const traverse = require('through2');
+const traverse = require('through-gulp');
+const mRollup = require('./rollup.config');
 
-// const rollup = require('rollup');
-// import babel from 'rollup-plugin-babel';
-// import eslint from 'rollup-plugin-eslint';
-// import resolve from 'rollup-plugin-node-resolve';
-// import commonjs from 'rollup-plugin-commonjs';
-// import replace from 'rollup-plugin-replace';
-// import uglify from 'rollup-plugin-uglify';
-
+let fileEntry = [];
 // const rGetFolder = (_dir) => {
 //     return fs.readdirSync(_dir)
 //         .filter((_file) => {
@@ -25,55 +19,40 @@ const traverse = require('through2');
 // };
 
 // const runPath = rGetFolder(path.resolve(__dirname, './dev'));
-
-gulp.task('jsmin', () => {
+gulp.task('path', () => {
+    gulp.src(path.resolve(__dirname, './dev/*/*.es6'))
+        .pipe(traverse(function(file, enc, cb) {
+            fileEntry.push(file.path);
+            // console.log(path.resolve(__dirname))
+            // fileEntry.push(path.resolve(__dirname, file.path));
+            console.log(fileEntry)
+            cb();
+        }));
+});
+gulp.task('js', ['path'], () => {
     gulp.src(path.resolve(__dirname, './dev/*/*.es6'))
         .pipe($.plumber({
-            errorHandler: $.notify.onError("Error-jsmin: <%= error %>")
+            errorHandler: $.notify.onError("Error-js: <%= error %>")
         }))
         .pipe($.cached('jsing'))
-        .pipe($.eslint())
-        .pipe($.eslint.format())
-        .pipe($.jsImport({ hideConsole: true }))
-        .pipe($.babel())
-        .pipe($.rollupStream()) // 去除冗余代码
+        .pipe($.rollup(mRollup(fileEntry)))
         .pipe($.rename({ extname: `.js` }))
-        .pipe(gulp.dest(path.resolve(__dirname, `./dist/`)))
-        // .pipe(traverse.obj(function(file, enc, cb) {
-        //     rollup.rollup({
-        //         entry: file.path,
-        //         dest: path.resolve(__dirname, `./dist/`),
-        //         // external: ['jquery'],
-        //         // paths: {
-        //         //     jquery: 'https://mimg.127.net/pub/common/js/jquery.min.js'
-        //         // },
-        //         plugins: [
-        //             babel(),
-        //             eslint(),
-        //             commonjs(),
-        //             resolve({
-        //                 jsnext: true, //jsnext属性是为了帮助Node模块迁移到ES2015的一部分
-        //                 // 下面两个帮助插件决定，哪个程序包应该被bundle文件使用
-        //                 main: true,
-        //                 browser: true
-        //             }),
-        //         ]
-        //     })
-        // }))
+        .pipe(gulp.dest(path.resolve(__dirname, `./dist/`)));
 });
 
-gulp.task('imgmin', () => {
+gulp.task('img', () => {
     return gulp.src(path.resolve(__dirname, `./dev/*/img/*.{png,jpg,gif,ico}`))
         .pipe($.plumber({
-            errorHandler: $.notify.onError("Error: <%= error %>")
+            errorHandler: $.notify.onError("Error-img: <%= error %>")
         }))
-        .pipe($.imageisux('../imgmin', false))
+        .pipe($.cached('imging'))
+        .pipe(($.imageisux('../imgmin', false)))
 });
 
-gulp.task('cssmin', ['imgmin'], () => {
+gulp.task('css', ['img'], () => {
     return gulp.src(path.resolve(__dirname, `./dev/*/*.scss`))
         .pipe($.plumber({
-            errorHandler: $.notify.onError("Error: <%= error %>")
+            errorHandler: $.notify.onError("Error-css: <%= error %>")
         }))
         .pipe($.cached('cssing'))
         .pipe($.sass().on('error', $.sass.logError))
@@ -106,4 +85,9 @@ gulp.task('clean', function() {
         .pipe($.clean({ force: true }))
 });
 
-gulp.task('default', $.sequence('clean', 'cssmin', 'jsmin'));
+gulp.task('watch', function() {
+    gulp.watch('./dev/**/*.scss', ['css'])
+        .watch('./dev/**/*.es6', ['js'])
+        .watch('./dev/**/img/*', ['img']);
+});
+gulp.task('default', $.sequence('clean', 'css', 'js'));
