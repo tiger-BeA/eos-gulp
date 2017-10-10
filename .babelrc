@@ -1,12 +1,10 @@
 {
-    "presets": [
-        "es2015-rollup",
-        "stage-2"
-    ],
+    "presets": ["env"],
     "plugins": [
         "add-module-exports",
         "transform-runtime",
-        "lodash"
+        "lodash",
+        "external-helpers"
     ],
     "comments": false
 }

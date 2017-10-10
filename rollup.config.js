@@ -1,8 +1,8 @@
 const babel = require('rollup-plugin-babel');
-const eslint = require('rollup-plugin-eslint');
 const resolve = require('rollup-plugin-node-resolve');
 const commonjs = require('rollup-plugin-commonjs');
 const postcss = require('rollup-plugin-postcss');
+const eslint = require('rollup-plugin-eslint');
 
 module.exports = function(params) {
     return {
@@ -10,13 +10,15 @@ module.exports = function(params) {
         format: 'iife',
         plugins: [
             postcss({
-                extensions: ['.scss']
+                extensions: ['.css']
             }),
+            // 以防加载node模块
             resolve({
                 jsnext: true,
                 main: true,
                 browser: true
             }),
+            // 以防加载node模块
             commonjs(),
             eslint(),
             babel({

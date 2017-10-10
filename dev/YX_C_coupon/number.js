@@ -1,4 +1,4 @@
-function con() {
-    console.log('Halo!');
-}
-export default con
+ function con() {
+     return 1 + 3;
+ }
+ export default con

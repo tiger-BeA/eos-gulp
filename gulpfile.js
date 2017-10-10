@@ -1,43 +1,32 @@
 const gulp = require('gulp');
-const fs = require('fs');
 const path = require('path');
-const ip = require('ip');
-const opn = require('opn');
 const plugins = require('gulp-load-plugins'),
     $ = plugins();
 const cssnext = require('postcss-cssnext');
 const cssnano = require('cssnano');
 const traverse = require('through-gulp');
 const mRollup = require('./rollup.config');
+const glob = require('glob');
 
-let fileEntry = [];
-// const rGetFolder = (_dir) => {
-//     return fs.readdirSync(_dir)
-//         .filter((_file) => {
-//             return fs.statSync(path.join(_dir, _file)).isDirectory()
-//         })
-// };
+const rGetJsFile = (_dir) => {
+    return glob.sync(_dir, { nodir: true, sync: true });
+}
+const fileEntry = rGetJsFile(path.resolve(__dirname, './dev/*/*.es6'));
 
-// const runPath = rGetFolder(path.resolve(__dirname, './dev'));
-gulp.task('path', () => {
-    gulp.src(path.resolve(__dirname, './dev/*/*.es6'))
-        .pipe(traverse(function(file, enc, cb) {
-            fileEntry.push(file.path);
-            // console.log(path.resolve(__dirname))
-            // fileEntry.push(path.resolve(__dirname, file.path));
-            console.log(fileEntry)
-            cb();
-        }));
-});
-gulp.task('js', ['path'], () => {
-    gulp.src(path.resolve(__dirname, './dev/*/*.es6'))
-        .pipe($.plumber({
-            errorHandler: $.notify.onError("Error-js: <%= error %>")
-        }))
-        .pipe($.cached('jsing'))
-        .pipe($.rollup(mRollup(fileEntry)))
-        .pipe($.rename({ extname: `.js` }))
-        .pipe(gulp.dest(path.resolve(__dirname, `./dist/`)));
+gulp.task('js', () => {
+    const jsTask = fileEntry.map((fileDir) => {
+        let _dir = path.normalize(fileDir),
+            _lastDir = _dir.split(path.sep).slice(-2, -1);
+        return gulp.src(_dir)
+            .pipe($.plumber({
+                errorHandler: $.notify.onError("Error-img: <%= error %>")
+            }))
+            .pipe($.cached(`jsing`))
+            .pipe($.rollup(mRollup(_dir)))
+            .pipe($.rename({ extname: `.js` }))
+            .pipe(gulp.dest(path.resolve(__dirname, `./dist/${_lastDir}/`)));
+    });
+    return jsTask;
 });
 
 gulp.task('img', () => {
@@ -90,4 +79,5 @@ gulp.task('watch', function() {
         .watch('./dev/**/*.es6', ['js'])
         .watch('./dev/**/img/*', ['img']);
 });
+
 gulp.task('default', $.sequence('clean', 'css', 'js'));
